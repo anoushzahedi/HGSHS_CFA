@@ -3,8 +3,8 @@ title: "R-code for Online Repository"
 author: "AZ"
 date: "1/28/2021"
 output:
-  html_document:
-    df_print: paged
+  github_document
+
 ---
 
 ```{r setup, include=FALSE}
@@ -28,7 +28,7 @@ library(grid)
 library(gridExtra)
 
 
-HGSHS <- read_excel("Screening Data-2020.01.20-1.xlsx",col_names = TRUE)
+HGSHS <- read_excel("Screening Data-2020.01.20-1,for-online.xlsx",col_names = TRUE)
 
 HGSHS[,c("HO1",
          "HO2",
