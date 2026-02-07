@@ -1,0 +1,290 @@
+---
+title: "R-code for Online Repository"
+author: "AZ"
+date: "1/28/2021"
+output:
+  github_document
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+## R Markdown
+
+```{r}
+
+library(kableExtra)
+library(matrixStats)
+library(dplyr)
+library(ggplot2)
+library(rstatix)
+library(readxl)
+library(lavaan)
+library(semPlot)
+library(grid)
+library(gridExtra)
+
+
+HGSHS <- read_excel("Screening Data-2020.01.20-1,for-online.xlsx",col_names = TRUE)
+
+HGSHS[,c("HO1",
+         "HO2",
+         "HO3",
+         "HO4",
+         "HO5",
+         "HO6",
+         "HO7",
+         "HO8",
+         "HO9",
+         "HO10",
+         "HO11",
+         "HO12")] <-
+     lapply(HGSHS[,c( "HO1",
+                     "HO2",
+                     "HO3",
+                     "HO4",
+                     "HO5",
+                     "HO6",
+                     "HO7",
+                     "HO8",
+                     "HO9",
+                     "HO10",
+                     "HO11",
+                     "HO12")], ordered)
+```
+
+## Models
+
+## Model 1: G-Factor Model
+
+```{r}
+HGSHS.model.G <- ' GF  =~ HO2 + HO3 + HO7 + HO1 + HO4 + HO6 + 
+                          HO8 + HO10 + HO5 + HO9 + HO11 + HO12'
+                          
+
+fitG <- cfa(HGSHS.model.G, data=HGSHS, std.lv=TRUE)
+
+summary(fitG, fit.measures=TRUE)
+
+parameterEstimates(fitG, standardized=TRUE)
+
+
+G1 <- semPaths(fitG, "std", edge.label.cex = 1.5, exoVar = FALSE,layout = "tree3",
+         curvePivot = TRUE,curvature = 2,thresholds = 0, intercepts = FALSE,
+         rotation = 4,
+         sizeMan = 10, sizeMan2 = 8, sizeLat = 15, asize =4 , weighted = F,
+         pastel = TRUE, color = list(lat = rgb(214,156,78, maxColorValue = 255),
+         man = rgb(214,156,78, maxColorValue = 255)),
+         edge.color = rgb(50,50,50, maxColorValue = 255),
+         mar = c(3,7,3,7),style = "OpenMx",)
+
+```
+
+## Model 5: Two-Factor Model
+
+```{r}
+
+HGSHS.model.extra1 <- 'F1  =~ HO2 + HO3 + HO7 + HO1  
+                       F2  =~ HO4 + HO6 + HO8 + HO10 + HO5 + 
+                       HO9 + HO11 + HO12'
+
+fitextra1 <- cfa(HGSHS.model.extra1,std.lv=TRUE, data=HGSHS)
+
+summary(fitextra1, fit.measures=TRUE)
+
+parameterEstimates(fitextra1, standardized=TRUE)
+
+anova(fitextra1,fitG)
+
+G2 <- semPaths(fitextra1, "std",  edge.label.cex = 1.5, exoVar = FALSE,
+         layout = "tree3",
+         curvePivot = TRUE,curvature = 2,thresholds = 0,
+         intercepts = FALSE,rotation = 4,
+         sizeMan = 8, sizeMan2 = 8, sizeLat = 15, asize =4 , weighted = F,
+         pastel = TRUE, groups = "latents",
+         edge.color = rgb(50,50,50, maxColorValue = 255),
+         mar = c(3,7,3,7),style = "OpenMx",)
+
+
+```
+
+## Model 2: Three-Factor Model
+
+```{r}
+
+HGSHS.model.threenested <- 'S  =~ HO2 + HO3 + HO7 + HO1  
+                            SA  =~ HO4 + HO6 + HO8 + HO10 + HO5
+                            EF  =~ HO9 + HO11 + HO12'
+
+fit3n <- cfa(HGSHS.model.threenested, data=HGSHS, std.lv=TRUE)
+
+summary(fit3n, fit.measures=TRUE)
+
+
+parameterEstimates(fit3n, standardized=TRUE)
+
+anova(fit3n,fitextra1)
+
+
+G3 <- semPaths(fit3n, "std",  edge.label.cex = 1.5, exoVar = FALSE,layout = "tree3",
+         curvePivot = TRUE,curvature = 2,thresholds = 0,
+         intercepts = FALSE,rotation = 4,
+         sizeMan = 8, sizeMan2 = 8, sizeLat = 15, asize =4 , weighted = F,
+         pastel = TRUE, groups = "latents",
+         edge.color = rgb(50,50,50, maxColorValue = 255),
+         mar = c(3,7,3,7),style = "OpenMx",)
+```
+
+## Model 6: Conventional Bifactor
+
+```{r}
+
+HGSHS.modelc2.bifactor <- 'GF  =~ HO3 + HO2 + HO7 + HO1 + HO4 + HO6 + HO8 +
+                                  HO10 + HO5 + HO9 + HO11 + HO12
+                          
+                          SA  =~  HO4 + HO6  + HO8 + HO10 + HO5
+                          EF  =~  HO12 +HO11+HO9
+                          SA~~EF
+                          GF~~0*EF
+                          GF~~0*SA'
+
+fitBic2 <- cfa(HGSHS.modelc2.bifactor,std.lv=TRUE, data=HGSHS)
+
+summary(fitBic2, fit.measures=TRUE)
+
+parameterEstimates(fitBic2, standardized=TRUE)
+
+
+anova(fitBic2,fit3n)
+
+G5 <- semPaths(fitBic2, "std", edge.label.cex = 1.5, exoVar = FALSE, style = "OpenMx",
+         layout = "tree2",bifactor = c("GF"), reorder = FALSE, 
+         curvePivot = TRUE, curvature = 2,thresholds = 0,
+         intercepts = FALSE,rotation = 4,
+         sizeMan = 8, sizeMan2 = 8, sizeLat = 15, asize =4 ,weighted = F,
+         pastel = TRUE, groups = "latents",
+         edge.color = rgb(50,50,50, maxColorValue = 255),
+         mar = c(2,5,5,4))
+```
+
+
+## Model 3: Bifactor-(*S - 1*) Model")
+```{r}
+
+HGSHS.model.bifactor <- ' S  =~ HO3 + HO2 + HO7 + HO1
+                          SA  =~ HO4 + HO6 + HO8 + HO10 + HO5 
+                          EF  =~ HO9 + HO11 + HO12
+                          
+                          GF  =~ HO2 + HO3 + HO7 + HO1 + HO4 + HO6 + HO8 +
+                          HO10 + HO5 + HO9 + HO11 + HO12
+                          
+                          GF~~0*SA
+                          GF~~0*EF
+                          GF~~0*S'
+fitBi <- cfa(HGSHS.model.bifactor, data=HGSHS, std.lv=TRUE, orthogonal=TRUE)
+
+summary(fitBi, fit.measures=TRUE)
+
+parameterEstimates(fitBi, standardized=TRUE)
+
+anova(fitBi,fit3n)
+anova(fitBi,fitBic2)
+
+
+G4 <- semPaths(fitBi, "std", edge.label.cex = 1.5, exoVar = FALSE, style = "OpenMx",
+         layout = "tree2",bifactor = c("GF"), reorder = FALSE, 
+         curvePivot = TRUE, curvature = 2,thresholds = 0,
+         intercepts = FALSE,rotation = 4,
+         sizeMan = 8, sizeMan2 = 8, sizeLat = 15, asize =4 ,weighted = F,
+         pastel = TRUE, groups = "latents",
+         edge.color = rgb(50,50,50, maxColorValue = 255),
+         mar = c(2,5,5,4))
+
+```
+
+## Model 4: Bifactor-(*SI - 1*) Model")
+```{r}
+
+HGSHS.modelc.bifactor <- '  GF  =~ HO3 + HO2+ HO7 + HO1 +
+                                   HO4 + HO6  + HO8 + HO10+
+                                   HO5 + HO9 + HO11 + HO12
+                            S  =~  HO2+ HO7 + HO1 
+                            SA  =~  HO4 + HO6  + HO8 + HO10 + HO5
+                            EF  =~  HO12+HO11+HO9
+                            
+                            GF~~0*SA
+                            GF~~0*EF
+                            GF~~0*S'
+
+fitBic <- cfa(HGSHS.modelc.bifactor, data=HGSHS,std.lv=TRUE, estimator = "WLSMV")
+
+
+summary(fitBic, fit.measures=TRUE)
+
+parameterEstimates(fitBic, standardized=TRUE)
+
+anova(fitBic,fit3n)
+anova(fitBic,fitBi)
+anova(fitBic,fitBic2)
+
+G6 <- semPaths(fitBic, "std", edge.label.cex = 1.5, exoVar = FALSE, style = "OpenMx",
+         layout = "tree2",bifactor = c("GF"), reorder = FALSE,
+         curvePivot = TRUE, curvature = 2,thresholds = 0,
+         intercepts = FALSE,rotation = 4,
+         sizeMan = 8, sizeMan2 = 8, sizeLat = 15, asize =4 , weighted = F,
+         pastel = TRUE, groups = "latents",
+         edge.color = rgb(50,50,50, maxColorValue = 255),
+         mar = c(2,7,5,4))
+
+```
+
+# General Plot
+```{r}
+
+curveFun <- function(graph, Curve=NULL){
+  
+Edgelist <- as.data.frame(graph$Edgelist)
+Labels <- graph$graphAttributes$Nodes$labels
+
+# Make curve object:
+Curve <- graph$graphAttributes$Edges$curve
+
+# Make some edges curved:
+
+Curve[Edgelist$from == which(Labels == "GF") & Edgelist$to == which(Labels == "HO3")]  <- -.4
+Curve[Edgelist$from == which(Labels == "GF") & Edgelist$to == which(Labels == "HO2")]  <- -.3
+Curve[Edgelist$from == which(Labels == "GF") & Edgelist$to == which(Labels == "HO7")]  <- -.2
+Curve[Edgelist$from == which(Labels == "GF") & Edgelist$to == which(Labels == "HO1")]  <- -.1
+
+
+Curve[Edgelist$from == which(Labels == "GF") & Edgelist$to == which(Labels == "HO5")]  <- .1
+Curve[Edgelist$from == which(Labels == "GF") & Edgelist$to == which(Labels == "HO9")]  <- .2
+Curve[Edgelist$from == which(Labels == "GF") & Edgelist$to == which(Labels == "HO11")]  <- .3
+Curve[Edgelist$from == which(Labels == "GF") & Edgelist$to == which(Labels == "HO12")]  <- .4
+return(Curve)
+
+}
+
+library(qgraph)
+attach(mtcars)
+layout(matrix(c(1,1,2,2,3,3,4,4,5,5,6,6), 3, 4, byrow = TRUE))
+
+qgraph(G1)
+title(expression(bold("(A)")*" Model 1: G-Factor Model"))
+qgraph(G2)
+title(expression(bold("(B)")*" Model 5: Two-Factor Model"))
+qgraph(G3)
+title(expression(bold("(C)")*" Model 2: Three-Factor Model"))
+qgraph(G4, curve = curveFun(G4))
+title(expression(bold("(D)")*" Model 6: Conventional Bifactor"))
+qgraph(G5, curve = curveFun(G5))
+title(expression(bold("(E)")*" Model 3: Bifactor-(" *italic("S")* " - 1) Model"))
+qgraph(G6, curve = curveFun(G6))
+title(expression(bold("(F)")*" Model 4: Bifactor-(" *italic("SI")* ". - 1) Model"))
+ 
+dev.print(png, file = "Model.png", res= 800, width = 5000, height = 5000)
+```
+
